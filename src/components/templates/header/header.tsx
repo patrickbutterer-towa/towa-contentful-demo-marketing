@@ -1,14 +1,13 @@
 import Menu from '@mui/icons-material/Menu';
-import { AppBar, Container, IconButton, Theme, Toolbar, Box } from '@mui/material';
+import { AppBar, Container, IconButton, Toolbar, Box } from '@mui/material';
 import { makeStyles } from '@mui/styles';
 import { useTranslation } from 'next-i18next';
+import NextLink from 'next/link';
 
 import { CtfNavigationGql } from '@src/components/features/ctf-components/ctf-navigation/ctf-navigation-gql';
-import { Link } from '@src/components/shared/link';
-import Logo from '@src/icons/colorful-coin-logo.svg';
 import { HEADER_HEIGHT, HEADER_HEIGHT_MD, CONTAINER_WIDTH } from '@src/theme';
 
-const useStyles = makeStyles((theme: Theme) => ({
+const useStyles = makeStyles(theme => ({
   appbar: {
     boxShadow: '0 2px 6px #00000021',
   },
@@ -25,37 +24,9 @@ const useStyles = makeStyles((theme: Theme) => ({
     height: '100%',
     justifyContent: 'space-between',
   },
-  logo: {
-    display: 'block',
-    maxWidth: '120px',
-    height: 'auto',
-  },
   menuWrapper: {
     alignItems: 'center',
     display: 'flex',
-  },
-  accountMenu: {
-    alignItems: 'center',
-    display: 'flex',
-    listStyle: 'none',
-    margin: 0,
-    padding: 0,
-  },
-
-  accountMenuItem: {
-    '& + &': {
-      marginLeft: theme.spacing(8),
-
-      [theme.breakpoints.up('lg')]: {
-        marginLeft: theme.spacing(10),
-      },
-    },
-    '& .MuiButton-startIcon': {
-      marginRight: '0.4rem',
-    },
-    '& .MuiButton-iconSizeSmall > :first-child': {
-      fontSize: '1.5rem',
-    },
   },
   corporateLogo: {
     display: 'block',
@@ -69,25 +40,25 @@ interface HeaderPropsInterface {
   onMenuClick?: () => any;
 }
 
-export const Header = (props: HeaderPropsInterface) => {
+export const Header = ({ onMenuClick, isMenuOpen }: HeaderPropsInterface) => {
   const { t } = useTranslation();
-
-  const { onMenuClick, isMenuOpen } = props;
   const classes = useStyles();
 
   return (
     <AppBar position="sticky" color="secondary" className={classes.appbar}>
-      <Toolbar>
+      <Toolbar className={classes.toolbar}>
         <Container
           className={classes.toolbarContent}
           disableGutters
           maxWidth={false}
-          style={{
-            maxWidth: `${CONTAINER_WIDTH / 10}rem`,
-          }}>
-          <Link href="/" withoutMaterial title={t('common.homepage')}>
-            <Logo className={classes.corporateLogo} />
-          </Link>
+          style={{ maxWidth: `${CONTAINER_WIDTH / 10}rem` }}
+        >
+          {/* Next.js 13+ Link direkt nutzen */}
+          <NextLink href="/" title={t('common.homepage')}>
+            <img src="icons/colorful-coin-logo.svg" alt="Logo" className={classes.corporateLogo} />
+          </NextLink>
+
+          {/* Navigation (nur ab md) */}
           <Box display={{ xs: 'none', md: 'block' }}>
             <div className={classes.menuWrapper}>
               <CtfNavigationGql />
@@ -95,14 +66,15 @@ export const Header = (props: HeaderPropsInterface) => {
           </Box>
         </Container>
 
-        {/* menu button */}
+        {/* Mobile Menu Button */}
         <Box display={{ md: 'none' }}>
           <IconButton
             title={t('navigation.mobileMenuButton')}
             onClick={() => onMenuClick?.()}
             aria-controls="mobile-menu"
             aria-expanded={isMenuOpen}
-            aria-haspopup="dialog">
+            aria-haspopup="dialog"
+          >
             <Menu />
           </IconButton>
         </Box>

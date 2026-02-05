@@ -1,5 +1,6 @@
 import { ContentfulLivePreviewProvider } from '@contentful/live-preview/react';
 import { ThemeProvider, StyledEngineProvider } from '@mui/material/styles';
+import { ThemeProvider as StylesThemeProvider } from '@mui/styles';
 import { DehydratedState, Hydrate, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AppProps } from 'next/app';
@@ -83,12 +84,14 @@ const CustomApp = ({
             <ReactQueryDevtools initialIsOpen={false} />
             <StyledEngineProvider injectFirst>
               <ThemeProvider theme={colorfulTheme}>
-                <Hydrate state={dehydratedState}>
-                  <Layout preview={previewActive}>
-                    <Component {...pageProps} err={err} />
-                    <Settings />
-                  </Layout>
-                </Hydrate>
+                <StylesThemeProvider theme={colorfulTheme}>
+                  <Hydrate state={dehydratedState}>
+                    <Layout preview={previewActive}>
+                      <Component {...pageProps} err={err} />
+                      <Settings />
+                    </Layout>
+                  </Hydrate>
+                </StylesThemeProvider>
               </ThemeProvider>
             </StyledEngineProvider>
           </QueryClientProvider>

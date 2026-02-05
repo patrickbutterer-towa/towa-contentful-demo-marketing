@@ -2,7 +2,7 @@ import MuiButton from '@mui/material/Button';
 import MuiLink from '@mui/material/Link';
 import { makeStyles } from '@mui/styles';
 import clsx from 'clsx';
-import NextLink from 'next/link';
+import NextLink, { LinkProps as NextLinkProps } from 'next/link';
 import { useRouter } from 'next/router';
 import queryString from 'query-string';
 import { ReactNode } from 'react';
@@ -15,7 +15,8 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-interface Props {
+// Exportierbarer Typ für externe Nutzung
+export type LinkProps = {
   children: ReactNode;
   href?: string;
   as?: string;
@@ -26,17 +27,16 @@ interface Props {
   underline?: boolean;
   onClick?: () => any;
   isButton?: boolean;
-  variant?: 'text' | 'outlined' | 'contained' | undefined;
-  size?: 'small' | 'medium' | 'large' | undefined;
+  variant?: 'text' | 'outlined' | 'contained';
+  size?: 'small' | 'medium' | 'large';
   color?: any;
   startIcon?: any;
   endIcon?: any;
   urlParams?: string;
   title?: string;
-}
-export type LinkProps = Props;
+} & Partial<NextLinkProps>;
 
-export const Link = (props: Props) => {
+export const Link = (props: LinkProps) => {
   const {
     dropUrlParams,
     className,
@@ -53,122 +53,117 @@ export const Link = (props: Props) => {
     urlParams = '',
     title,
   } = props;
+
   const router = useRouter();
   let href = props.href || '';
   let { as } = props;
 
+  // URL-Parameter anhängen
   if (!dropUrlParams && router) {
     const urlQuerystring = router.asPath.split('?')[1];
     if (urlQuerystring) {
-      href += href.indexOf('?') < 0 ? `?${urlQuerystring}` : `&${urlQuerystring}`;
+      href += href.includes('?') ? `&${urlQuerystring}` : `?${urlQuerystring}`;
     }
   }
 
-  if (urlParams !== '') {
+  if (urlParams) {
     const parsedUrlParams = queryString.parse(urlParams);
     const parsedHref = queryString.parseUrl(href);
-
-    const mergedParsedHref = {
+    href = queryString.stringifyUrl({
       ...parsedHref,
-      query: {
-        ...parsedHref.query,
-        ...parsedUrlParams,
-      },
-    };
+      query: { ...parsedHref.query, ...parsedUrlParams },
+    });
 
-    href = queryString.stringifyUrl(mergedParsedHref);
-
-    if (as !== undefined) {
+    if (as) {
       const parsedAs = queryString.parseUrl(as);
-
-      const mergedParsedAs = {
+      as = queryString.stringifyUrl({
         ...parsedAs,
-        query: {
-          ...parsedAs.query,
-          ...parsedUrlParams,
-        },
-      };
-
-      as = queryString.stringifyUrl(mergedParsedAs);
+        query: { ...parsedAs.query, ...parsedUrlParams },
+      });
     }
   }
 
   const classes = useStyles();
-
-  if (props.href === undefined || props.href === null) return <>{props.children}</>;
-
   const external = href.startsWith('http://') || href.startsWith('https://');
   const underlineStyle = underline ? 'always' : 'none';
 
-  if (external === true || !href) {
+  // Kein href → nur children rendern
+  if (!href) return <>{children}</>;
+
+  // Ohne Material
+  if (withoutMaterial) {
+    return (
+      <NextLink href={href} as={as} className={clsx(classes.baseAnchor, className)} title={title}>
+        {children}
+      </NextLink>
+    );
+  }
+
+  // Externe Links
+  if (external) {
     return isButton ? (
       <MuiButton
         href={href}
         className={className}
         color={color}
-        onClick={() => onClick && onClick()}
+        onClick={onClick}
         variant={variant}
         size={size}
         startIcon={startIcon}
         endIcon={endIcon}
-        title={title}>
+        title={title}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         {children}
       </MuiButton>
     ) : (
       <MuiLink
+        href={href}
         className={className}
         underline={underlineStyle}
         color={color}
-        href={href}
-        target={props.target}
+        onClick={onClick}
+        title={title}
+        target="_blank"
         rel="noopener noreferrer"
-        onClick={() => onClick && onClick()}
-        title={title}>
+      >
         {children}
       </MuiLink>
     );
   }
 
-  if (withoutMaterial === true) {
+  // Interne Links
+  if (isButton) {
     return (
-      <NextLink href={href} as={as} passHref>
-        <a className={clsx(classes.baseAnchor, className)} title={title}>
-          {children}
-        </a>
-      </NextLink>
-    );
-  }
-
-  if (isButton === true) {
-    return (
-      <NextLink href={href} as={as} passHref>
-        <MuiButton
-          href={as}
-          className={className}
-          color={color}
-          onClick={() => onClick && onClick()}
-          variant={variant}
-          size={size}
-          startIcon={startIcon}
-          endIcon={endIcon}
-          title={title}>
-          {children}
-        </MuiButton>
-      </NextLink>
+      <MuiButton
+        component={NextLink}
+        href={href}
+        className={className}
+        color={color}
+        onClick={onClick}
+        variant={variant}
+        size={size}
+        startIcon={startIcon}
+        endIcon={endIcon}
+        title={title}
+      >
+        {children}
+      </MuiButton>
     );
   }
 
   return (
-    <NextLink href={href} as={as} passHref>
-      <MuiLink
-        href={as}
-        className={className}
-        underline={underlineStyle}
-        color={color}
-        onClick={() => onClick && onClick()}
-        title={title}>
-        {children}
-      </MuiLink>
-    </NextLink>
+    <MuiLink
+      component={NextLink}
+      href={href}
+      className={className}
+      underline={underlineStyle}
+      color={color}
+      onClick={onClick}
+      title={title}
+    >
+      {children}
+    </MuiLink>
   );
 };

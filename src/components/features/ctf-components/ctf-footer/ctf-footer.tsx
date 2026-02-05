@@ -16,7 +16,6 @@ import {
 import { LanguageSelector } from '@src/components/features/language-selector';
 import { Link } from '@src/components/shared/link';
 import { useContentfulContext } from '@src/contentful-context';
-import Logo from '@src/icons/logo-tagline.svg';
 import { CONTAINER_WIDTH } from '@src/theme';
 
 const useStyles = makeStyles((theme: Theme) => ({
@@ -305,7 +304,7 @@ export const CtfFooter = (props: FooterFieldsFragment) => {
         <section className={classes.footerCorporate}>
           <div className={classes.corporateLogoMenu}>
             <div className={classes.corporateLogoContainer}>
-              <Logo className={classes.corporateLogo} />
+              <img src="icons/logo-tagline.svg" alt="Logo" className={classes.corporateLogo} />
             </div>
 
             <section className={classes.copyrightAndLegal}>

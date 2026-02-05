@@ -115,7 +115,7 @@ export const Settings = () => {
         }}
         title="Toggle editorial toolbox"
       >
-        <SettingsIcon className={classes.toggleImage} />
+        <img src="icons/settings-icon.svg" alt="Logo" className={classes.toggleImage} />
       </button>
     </>
   );

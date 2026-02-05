@@ -14,7 +14,6 @@ import queryString from 'query-string';
 import React, { useState } from 'react';
 
 import { useContentfulContext } from '@src/contentful-context';
-import SettingsIcon from '@src/icons/settings-icon.svg';
 
 const useStyles = makeStyles((theme: Theme) => ({
   root: {
@@ -287,7 +286,7 @@ export const SettingsForm: React.FC<SettingsFormPropsInterface> = props => {
   return (
     <section className={classes.root}>
       <header className={classes.header}>
-        <SettingsIcon className={classes.logo} />
+        <img src="icons/settings-icon.svg" alt="Logo" className={classes.logo} />
         <Typography className={classes.headerTitle} variant="h1">
           Editorial Toolbox
         </Typography>

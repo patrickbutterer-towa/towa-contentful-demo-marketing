@@ -90,4 +90,6 @@ module.exports = withPlugins(plugins, {
 
     return config;
   },
+
+  turbopack: {},
 });
