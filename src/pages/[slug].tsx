@@ -1,5 +1,5 @@
 import { dehydrate, QueryClient } from '@tanstack/react-query';
-import { NextPage } from 'next';
+import { NextPage, NextPageContext } from 'next';
 import { useRouter } from 'next/router';
 
 import { useCtfFooterQuery } from '@src/components/features/ctf-components/ctf-footer/__generated/ctf-footer.generated';
@@ -11,65 +11,45 @@ import { getServerSideTranslations } from '@src/lib/get-serverside-translations'
 import { prefetchMap, PrefetchMappingTypeFetcher } from '@src/lib/prefetch-mappings';
 import { prefetchPromiseArr } from '@src/lib/prefetch-promise-array';
 
-const SlugPage: NextPage<{ pageMissing?: boolean }> = ({ pageMissing }) => {
+const SlugPage: NextPage = () => {
   const router = useRouter();
   const slug = (router?.query.slug as string) || '';
-
-  if (pageMissing) return <div>Seite aktuell nicht verfügbar</div>;
 
   return <CtfPageGgl slug={slug} />;
 };
 
-export interface CustomNextPageContext {
-  params: { slug: string };
-  locale: string;
-  query: { preview?: string };
+export interface CustomNextPageContext extends NextPageContext {
+  params: {
+    slug: string;
+  };
+  id: string;
 }
 
 export const getServerSideProps = async ({ locale, params, query }: CustomNextPageContext) => {
   const slug = params.slug;
-  const isPreview: boolean =
-    query.preview === 'true' || // nur 'true' aktiviert Preview
-    (!!process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN && process.env.NODE_ENV !== 'production');
+  const preview = Boolean(query.preview);
 
   try {
     const queryClient = new QueryClient();
 
-    // Prefetch default queries
+    // Default queries
     const prefetchPromises = [
       queryClient.prefetchQuery(
-        useCtfPageQuery.getKey({ slug, locale, preview: isPreview }),
-        useCtfPageQuery.fetcher({ slug, locale, preview: isPreview }),
+        useCtfPageQuery.getKey({ slug, locale, preview }),
+        useCtfPageQuery.fetcher({ slug, locale, preview }),
       ),
       queryClient.prefetchQuery(
-        useCtfNavigationQuery.getKey({ locale, preview: isPreview }),
-        useCtfNavigationQuery.fetcher({ locale, preview: isPreview }),
+        useCtfNavigationQuery.getKey({ locale, preview }),
+        useCtfNavigationQuery.fetcher({ locale, preview }),
       ),
       queryClient.prefetchQuery(
-        useCtfFooterQuery.getKey({ locale, preview: isPreview }),
-        useCtfFooterQuery.fetcher({ locale, preview: isPreview }),
+        useCtfFooterQuery.getKey({ locale, preview }),
+        useCtfFooterQuery.fetcher({ locale, preview }),
       ),
     ];
-
-    // Fetch main page
-    const pageData = await useCtfPageQuery.fetcher({ slug, locale, preview: isPreview })();
+    // Dynamic queries
+    const pageData = await useCtfPageQuery.fetcher({ slug, locale, preview })();
     const page = pageData.pageCollection?.items[0];
-
-    if (!page || !page.pageContent) {
-      // Production: Seite fehlt → Platzhalter rendern
-      if (!isPreview) {
-        return {
-          props: {
-            ...(await getServerSideTranslations(locale)),
-            dehydratedState: dehydrate(queryClient),
-            pageMissing: true,
-          },
-        };
-      }
-
-      // Lokal: Preview → 404
-      return { notFound: true };
-    }
 
     const topSection = page?.topSectionCollection?.items;
     const extraSection = page?.extraSectionCollection?.items;
@@ -85,22 +65,48 @@ export const getServerSideProps = async ({ locale, params, query }: CustomNextPa
     if (content) {
       const { __typename, sys } = content;
 
+      if (!__typename)
+        return {
+          notFound: true,
+        };
+
       const query = prefetchMap?.[__typename];
-      if (query) {
-        const data: PrefetchMappingTypeFetcher = await query.fetcher({
-          id: sys.id,
+
+      if (!query)
+        return {
+          notFound: true,
+        };
+
+      const data: PrefetchMappingTypeFetcher = await query.fetcher({
+        id: sys.id,
+        locale,
+        preview,
+      })();
+
+      // Different data structured can be returned, this function makes sure the correct data is returned
+      const inputArr = (__typename => {
+        if ('topicBusinessInfo' in data) {
+          return data?.topicBusinessInfo?.body?.links.entries.block;
+        }
+
+        if ('topicPerson' in data) {
+          return [data?.topicPerson];
+        }
+
+        if ('topicProduct' in data) {
+          return [data?.topicProduct];
+        }
+
+        return [];
+      })();
+
+      await Promise.all([
+        ...prefetchPromiseArr({
+          inputArr,
           locale,
-          preview: isPreview,
-        })();
-        const inputArr = (() => {
-          if ('topicBusinessInfo' in data)
-            return data?.topicBusinessInfo?.body?.links.entries.block;
-          if ('topicPerson' in data) return [data?.topicPerson];
-          if ('topicProduct' in data) return [data?.topicProduct];
-          return [];
-        })();
-        await Promise.all([...prefetchPromiseArr({ inputArr, locale, queryClient })]);
-      }
+          queryClient,
+        }),
+      ]);
     }
 
     return {
@@ -109,16 +115,9 @@ export const getServerSideProps = async ({ locale, params, query }: CustomNextPa
         dehydratedState: dehydrate(queryClient),
       },
     };
-  } catch (err) {
-    console.error(err);
-
-    // Production: Seite fehlt → Platzhalter rendern
+  } catch {
     return {
-      props: {
-        ...(await getServerSideTranslations(params.slug)),
-        dehydratedState: dehydrate(new QueryClient()),
-        pageMissing: true,
-      },
+      notFound: true,
     };
   }
 };
